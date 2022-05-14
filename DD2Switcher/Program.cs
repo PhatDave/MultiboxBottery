@@ -69,7 +69,7 @@ internal static class Program {
     private static void NerfAll() {
         var i = 0;
         foreach (var game in games) {
-            game.ProcessorAffinity = new IntPtr(defaultAffinity >> i);
+            game.ProcessorAffinity = new IntPtr(defaultAffinity);
             game.PriorityClass = ProcessPriorityClass.Idle;
             i++;
         }
