@@ -51,7 +51,8 @@ internal static class Program {
         var i = 0;
         foreach (var game in games)
             if (game != activeGame) {
-                var processAffinty = defaultAffinity >> i;
+                // var processAffinty = defaultAffinity >> i;
+                var processAffinty = defaultAffinity;
                 fullAffinity = fullAffinity & ~processAffinty;
                 game.ProcessorAffinity = new IntPtr(processAffinty);
                 i++;
@@ -75,6 +76,7 @@ internal static class Program {
     }
 
     private static void SwitchToGame(int index) {
+        if (index >= games.Length) return;
         SetForegroundWindow(games[index].MainWindowHandle);
         activeGame = games[index];
         AdjustAffinities();
@@ -109,12 +111,14 @@ internal static class Program {
         HotKeyManager.RegisterHotKey(Keys.D3, KeyModifiers.Alt);
         HotKeyManager.RegisterHotKey(Keys.D4, KeyModifiers.Alt);
         HotKeyManager.RegisterHotKey(Keys.D5, KeyModifiers.Alt);
+        HotKeyManager.RegisterHotKey(Keys.D6, KeyModifiers.Alt);
         HotKeyManager.RegisterHotKey(Keys.Q, KeyModifiers.Alt);
         HotKeyManager.RegisterHotKey(Keys.W, KeyModifiers.Alt);
         HotKeyManager.HotKeyPressed += HotKeyManager_HotKeyPressed;
         
         List<Pixel> pixelList = new List<Pixel>();
-        pixelList.Add(new Pixel(1062, 885, 240, 240, 240));
+        pixelList.Add(new Pixel(108, 108, 0, 0, 0));
+        pixelList.Add(new Pixel(1062, 885, 255, 255, 255));
 
         static void HotKeyManager_HotKeyPressed(object sender, HotKeyEventArgs e) {
             switch (e.Key) {
@@ -132,6 +136,9 @@ internal static class Program {
                     break;
                 case Keys.D5:
                     SwitchMainGame();
+                    break;
+                case Keys.D6:
+                    Environment.Exit(0);
                     break;
                 case Keys.Q:
                     NerfAll();
@@ -155,11 +162,12 @@ internal static class Program {
                 foreach (Pixel p in pixelList) {
                     if (p.ProcessBitmap(screenshot)) {
                         Console.Beep(1500, 850);
+                        break;
                     }
                 }
-                Thread.Sleep(1000);
+                Thread.Sleep(250);
             }
-            Thread.Sleep(1000);
+            Thread.Sleep(250);
         }
     }
 }

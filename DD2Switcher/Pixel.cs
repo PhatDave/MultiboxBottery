@@ -20,6 +20,6 @@ public class Pixel {
 
     public Boolean ProcessBitmap(Bitmap bmp) {
         Color tempPixel = bmp.GetPixel(x, y);
-        return tempPixel.R >= R && tempPixel.B >= B && tempPixel.G >= G;
+        return tempPixel.R == R && tempPixel.B == B && tempPixel.G == G;
     }
 }
