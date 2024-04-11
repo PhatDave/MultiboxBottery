@@ -1,15 +1,9 @@
-﻿using System;
+﻿using System.Diagnostics;
 using System.Drawing;
 
-namespace DD2Switcher; 
+namespace DD2Switcher;
 
 public class Pixel {
-    private int x { get; set; }
-    private int y { get; set; }
-    private int R { get; set; }
-    private int G { get; set; }
-    private int B { get; set; }
-
     public Pixel(int x, int y, int R, int G, int B) {
         this.x = x;
         this.y = y;
@@ -18,8 +12,14 @@ public class Pixel {
         this.B = B;
     }
 
-    public Boolean ProcessBitmap(Bitmap bmp) {
-        Color tempPixel = bmp.GetPixel(x, y);
-        return tempPixel.R == R && tempPixel.B == B && tempPixel.G == G;
+    private int x { get; }
+    private int y { get; }
+    private int R { get; }
+    private int G { get; }
+    private int B { get; }
+
+    public bool ProcessBitmap(Bitmap bmp) {
+        var tempPixel = bmp.GetPixel(x, y);
+        return tempPixel.R >= R && tempPixel.B >= B && tempPixel.G >= G;
     }
 }

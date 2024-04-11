@@ -2,20 +2,29 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.Media;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows.Forms;
 
-namespace DD2Switcher; 
+namespace DD2Switcher;
 
 internal static class Program {
-    private static Rectangle rect = new(0, 0, 1920, 1080);
+    private static Rectangle rect = new(0, 0, 2560, 1440);
     private static readonly Process[] games = Process.GetProcessesByName("Dundefgame");
+
+    private static readonly SoundPlayer beeper =
+        new(@"C:\Users\Administrator\RiderProjects\DD2Switcher\DD2Switcher\beep.wav");
+
     private static Process activeGame = games[0];
     private static Bitmap screenshot;
     private static Graphics graphics;
-    private static readonly int defaultAffinity = 0b100000000000;
+    private static readonly IntPtr defaultAffinity = new(0xFF000000);
+    private static readonly IntPtr fullAffinity = new(0xFFFFFFFF);
     private static bool paused = true;
+    
+    private static List<Point> relevantPoints = new List<Point>();
+    private static List<Point> pointsToRemove = new List<Point>();
 
     [DllImport("user32.dll")]
     private static extern void mouse_event(uint dwFlags, uint dx, uint dy, uint dwData, UIntPtr dwExtraInfo);
@@ -47,18 +56,10 @@ internal static class Program {
     }
 
     private static void AdjustAffinities() {
-        var fullAffinity = 0b111111111111;
-        var i = 0;
         foreach (var game in games)
-            if (game != activeGame) {
-                // var processAffinty = defaultAffinity >> i;
-                var processAffinty = defaultAffinity;
-                fullAffinity = fullAffinity & ~processAffinty;
-                game.ProcessorAffinity = new IntPtr(processAffinty);
-                i++;
-            }
-
-        activeGame.ProcessorAffinity = new IntPtr(fullAffinity);
+            if (game != activeGame)
+                game.ProcessorAffinity = defaultAffinity;
+        activeGame.ProcessorAffinity = fullAffinity;
     }
 
     private static void AdjustPriorities() {
@@ -67,11 +68,16 @@ internal static class Program {
     }
 
     private static void NerfAll() {
-        var i = 0;
         foreach (var game in games) {
-            game.ProcessorAffinity = new IntPtr(defaultAffinity);
+            game.ProcessorAffinity = defaultAffinity;
             game.PriorityClass = ProcessPriorityClass.Idle;
-            i++;
+        }
+    }
+
+    private static void BuffAll() {
+        foreach (var game in games) {
+            game.ProcessorAffinity = fullAffinity;
+            game.PriorityClass = ProcessPriorityClass.Normal;
         }
     }
 
@@ -106,6 +112,13 @@ internal static class Program {
 
     [STAThread]
     private static void Main() {
+        var processes = Process.GetProcesses();
+        var currentProcess = Process.GetCurrentProcess();
+
+        foreach (var process in processes)
+            if (process.Id != currentProcess.Id && process.ProcessName == currentProcess.ProcessName)
+                process.Kill();
+
         HotKeyManager.RegisterHotKey(Keys.D1, KeyModifiers.Alt);
         HotKeyManager.RegisterHotKey(Keys.D2, KeyModifiers.Alt);
         HotKeyManager.RegisterHotKey(Keys.D3, KeyModifiers.Alt);
@@ -114,11 +127,12 @@ internal static class Program {
         HotKeyManager.RegisterHotKey(Keys.D6, KeyModifiers.Alt);
         HotKeyManager.RegisterHotKey(Keys.Q, KeyModifiers.Alt);
         HotKeyManager.RegisterHotKey(Keys.W, KeyModifiers.Alt);
+        HotKeyManager.RegisterHotKey(Keys.R, KeyModifiers.Alt);
         HotKeyManager.HotKeyPressed += HotKeyManager_HotKeyPressed;
-        
-        List<Pixel> pixelList = new List<Pixel>();
-        pixelList.Add(new Pixel(108, 108, 0, 0, 0));
-        pixelList.Add(new Pixel(1062, 885, 255, 255, 255));
+
+        var pixelList = new System.Collections.Generic.List<Pixel>();
+        // pixelList.Add(new Pixel(1401, 1234, 224, 224, 224));
+        pixelList.Add(new Pixel(1359, 1235, 220, 220, 220));
 
         static void HotKeyManager_HotKeyPressed(object sender, HotKeyEventArgs e) {
             switch (e.Key) {
@@ -140,15 +154,15 @@ internal static class Program {
                 case Keys.D6:
                     Environment.Exit(0);
                     break;
-                case Keys.Q:
-                    NerfAll();
-                    break;
                 case Keys.W:
                     if (paused) {
-                        Console.Beep(1500, 500);
+                        beeper.Play();
                         paused = false;
-                    } else {
-                        Console.Beep(500, 500);
+                    }
+                    else {
+                        beeper.Play();
+                        Thread.Sleep(150);
+                        beeper.Play();
                         paused = true;
                     }
 
@@ -157,16 +171,51 @@ internal static class Program {
         }
 
         while (true) {
+            bool runOnce = false;
+            bool AAA = false;
+            relevantPoints.Clear();
             while (!paused) {
                 screenshot = CaptureWindow(games[0].MainWindowHandle);
-                foreach (Pixel p in pixelList) {
+                // screenshot.Save("SS.png");
+
+                // if (!runOnce) {
+                //     runOnce = true;
+                //     for (var y = 0; y < screenshot.Height; y++)
+                //     for (var x = 0; x < screenshot.Width; x++) {
+                //         var pixelColor = screenshot.GetPixel(x, y);
+                //         if (pixelColor.R > 220 && pixelColor.G > 220 && pixelColor.B > 220) 
+                //             relevantPoints.Add(new Point(x, y));
+                //     }
+                // }
+                //
+                // pointsToRemove.Clear();
+                // foreach (var relevantPoint in relevantPoints) {
+                //     var pixel = screenshot.GetPixel(relevantPoint.X, relevantPoint.Y);
+                //     if (!(pixel.R > 220) || !(pixel.G > 220) || !(pixel.B > 220))
+                //         pointsToRemove.Add(relevantPoint);
+                // }
+                //
+                // foreach (var point in pointsToRemove) {
+                //     relevantPoints.Remove(point);
+                // }
+                //
+                // Debug.WriteLine(relevantPoints.Count);
+                
+                foreach (var p in pixelList)
                     if (p.ProcessBitmap(screenshot)) {
-                        Console.Beep(1500, 850);
+                        beeper.Play();
                         break;
                     }
-                }
+
                 Thread.Sleep(250);
             }
+            
+            //     System.IO.TextWriter tw = new System.IO.StreamWriter("SavedList.txt");
+            //     foreach (var point in relevantPoints) {
+            //         tw.WriteLine(point.ToString());
+            //     }
+            //     tw.Close();   
+
             Thread.Sleep(250);
         }
     }
