@@ -1,3 +1,5 @@
 .idea
 **/Debug
 **/Properties
+obj
+bin
